@@ -14,15 +14,15 @@ steps:
 
 - script: |
     echo "🔧 Restoring dependencies..."
-    dotnet restore ./azure-devops-practice/azure-devops-practice/HelloWorld/HelloWorld.csproj
+    dotnet restore ./azure-devops-practice/HelloWorld/HelloWorld.csproj
   displayName: "Restore dependencies"
 
 - script: |
     echo "⚙️ Building project..."
-    dotnet build ./azure-devops-practice/azure-devops-practice/HelloWorld/HelloWorld.csproj --configuration Release
+    dotnet build ./azure-devops-practice/HelloWorld/HelloWorld.csproj --configuration Release
   displayName: "Build project"
 
 - script: |
     echo "🚀 Running project..."
-    dotnet run --project ./azure-devops-practice/azure-devops-practice/HelloWorld/HelloWorld.csproj
+    dotnet run --project ./azure-devops-practice/HelloWorld/HelloWorld.csproj
   displayName: "Run project"
