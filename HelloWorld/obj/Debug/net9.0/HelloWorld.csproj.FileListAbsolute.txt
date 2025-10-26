@@ -1,0 +1,14 @@
+/home/den4ik/azure-devops-practice/azure-devops-practice/HelloWorld/bin/Debug/net9.0/HelloWorld
+/home/den4ik/azure-devops-practice/azure-devops-practice/HelloWorld/bin/Debug/net9.0/HelloWorld.deps.json
+/home/den4ik/azure-devops-practice/azure-devops-practice/HelloWorld/bin/Debug/net9.0/HelloWorld.runtimeconfig.json
+/home/den4ik/azure-devops-practice/azure-devops-practice/HelloWorld/bin/Debug/net9.0/HelloWorld.dll
+/home/den4ik/azure-devops-practice/azure-devops-practice/HelloWorld/bin/Debug/net9.0/HelloWorld.pdb
+/home/den4ik/azure-devops-practice/azure-devops-practice/HelloWorld/obj/Debug/net9.0/HelloWorld.GeneratedMSBuildEditorConfig.editorconfig
+/home/den4ik/azure-devops-practice/azure-devops-practice/HelloWorld/obj/Debug/net9.0/HelloWorld.AssemblyInfoInputs.cache
+/home/den4ik/azure-devops-practice/azure-devops-practice/HelloWorld/obj/Debug/net9.0/HelloWorld.AssemblyInfo.cs
+/home/den4ik/azure-devops-practice/azure-devops-practice/HelloWorld/obj/Debug/net9.0/HelloWorld.csproj.CoreCompileInputs.cache
+/home/den4ik/azure-devops-practice/azure-devops-practice/HelloWorld/obj/Debug/net9.0/HelloWorld.dll
+/home/den4ik/azure-devops-practice/azure-devops-practice/HelloWorld/obj/Debug/net9.0/refint/HelloWorld.dll
+/home/den4ik/azure-devops-practice/azure-devops-practice/HelloWorld/obj/Debug/net9.0/HelloWorld.pdb
+/home/den4ik/azure-devops-practice/azure-devops-practice/HelloWorld/obj/Debug/net9.0/HelloWorld.genruntimeconfig.cache
+/home/den4ik/azure-devops-practice/azure-devops-practice/HelloWorld/obj/Debug/net9.0/ref/HelloWorld.dll
