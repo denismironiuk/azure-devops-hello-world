@@ -2,27 +2,55 @@ trigger:
 - main
 
 pool:
-  name: Default
+  name: Default   # self-hosted агент
+
+variables:
+  buildConfiguration: 'Release'
+  buildVersion: '1.0.$(Build.BuildId)'   # автоинкремент BuildId от Azure DevOps
+  artifactName: 'drop_$(Build.BuildNumber)'   # например drop_20251026.1
 
 steps:
+# 1️⃣ Клонирование репозитория
 - checkout: self
 
+# 2️⃣ Установка .NET SDK
 - task: UseDotNet@2
   inputs:
     packageType: 'sdk'
     version: '9.0.x'
 
+# 3️⃣ Восстановление зависимостей
 - script: |
     echo "🔧 Restoring dependencies..."
-    dotnet restore /home/den4ik/azure-agent/_work/1/s/HelloWorld/HelloWorld.csproj
+    dotnet restore ./HelloWorld/HelloWorld.csproj
   displayName: "Restore dependencies"
 
+# 4️⃣ Сборка проекта
 - script: |
     echo "⚙️ Building project..."
-    dotnet build /home/den4ik/azure-agent/_work/1/s/HelloWorld/HelloWorld.csproj --configuration Release
+    dotnet build ./HelloWorld/HelloWorld.csproj --configuration $(buildConfiguration) --output $(Build.ArtifactStagingDirectory)
   displayName: "Build project"
 
-- script: |
-    echo "🚀 Running project..."
-    dotnet run --project /home/den4ik/azure-agent/_work/1/s/HelloWorld/HelloWorld.csproj
-  displayName: "Run project"
+# 5️⃣ (опционально) Запуск тестов
+# - script: |
+#     echo "🧪 Running tests..."
+#     dotnet test ./HelloWorld/HelloWorld.csproj --configuration $(buildConfiguration)
+#   displayName: "Run tests"
+
+# 6️⃣ Архивация результата сборки
+- task: ArchiveFiles@2
+  inputs:
+    rootFolderOrFile: '$(Build.ArtifactStagingDirectory)'
+    includeRootFolder: false
+    archiveType: 'zip'
+    archiveFile: '$(Build.ArtifactStagingDirectory)/$(artifactName).zip'
+    replaceExistingArchive: true
+  displayName: "📦 Create versioned artifact archive"
+
+# 7️⃣ Публикация артефактов в Azure DevOps
+- task: PublishBuildArtifacts@1
+  inputs:
+    PathtoPublish: '$(Build.ArtifactStagingDirectory)/$(artifactName).zip'
+    ArtifactName: '$(artifactName)'
+    publishLocation: 'Container'
+  displayName: "🚀 Upload versioned artifact to Azure DevOps"
