@@ -4,38 +4,25 @@ trigger:
 pool:
   name: Default
 
-variables:
-  buildConfiguration: 'Release'
-  buildVersion: '1.0.$(Build.BuildId)'
-
 steps:
+- checkout: self
+
 - task: UseDotNet@2
   inputs:
     packageType: 'sdk'
     version: '9.0.x'
 
 - script: |
-    echo "Restoring dependencies..."
-    dotnet restore
-  displayName: 'Restore dependencies'
+    echo "🔧 Restoring dependencies..."
+    dotnet restore ./HelloWorld/HelloWorld.csproj
+  displayName: "Restore dependencies"
 
 - script: |
-    echo "Building project..."
-    dotnet build --configuration $(buildConfiguration)
-  displayName: 'Build project'
+    echo "⚙️ Building project..."
+    dotnet build ./HelloWorld/HelloWorld.csproj --configuration Release
+  displayName: "Build project"
 
 - script: |
-    echo "Incrementing version..."
-    echo "Build version: $(buildVersion)"
-  displayName: 'Increment and print version'
-
-- script: |
-    echo "Running app..."
-    dotnet run
-  displayName: 'Run project'
-
-- task: PublishBuildArtifacts@1
-  inputs:
-    pathToPublish: '$(System.DefaultWorkingDirectory)'
-    artifactName: 'drop'
-    publishLocation: 'Container'
+    echo "🚀 Running project..."
+    dotnet run --project ./HelloWorld/HelloWorld.csproj
+  displayName: "Run project"
