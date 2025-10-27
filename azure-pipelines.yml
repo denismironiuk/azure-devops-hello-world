@@ -42,15 +42,15 @@ stages:
       displayName: '⚙️ Install .NET 9 SDK'
     
     - script: |
-    echo "Stripping branch/PR params for Community Edition..."
-    CLEANED=$(echo "$SONARQUBE_SCANNER_PARAMS" \
-      | sed 's/"sonar\.branch\.name":"[^"]*",\?//g' \
-      | sed 's/"sonar\.pullrequest\.[^"]*":"[^"]*",\?//g' \
-      | sed 's/,\s*}/}/g' \
-      | sed 's/{\s*,/{/g')
-    echo "##vso[task.setvariable variable=SONARQUBE_SCANNER_PARAMS]$CLEANED"
-  displayName: 'SonarQube (CE): strip branch/PR params'
-  condition: succeeded()
+        echo "Stripping branch/PR params for Community Edition..."
+        CLEANED=$(echo "$SONARQUBE_SCANNER_PARAMS" \
+          | sed 's/"sonar\.branch\.name":"[^"]*",\?//g' \
+          | sed 's/"sonar\.pullrequest\.[^"]*":"[^"]*",\?//g' \
+          | sed 's/,\s*}/}/g' \
+          | sed 's/{\s*,/{/g')
+        echo "##vso[task.setvariable variable=SONARQUBE_SCANNER_PARAMS]$CLEANED"
+      displayName: 'SonarQube (CE): strip branch/PR params'
+      condition: succeeded()
 
 
 
