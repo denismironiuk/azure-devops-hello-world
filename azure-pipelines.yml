@@ -19,21 +19,20 @@ steps:
     packageType: 'sdk'
     version: '9.0.x'
 
-# 3️⃣ Подготовка анализа SonarQube
 - task: SonarQubePrepare@5
   inputs:
-    SonarQube: 'SonarQubeConnection'   # имя service connection
+    SonarQube: 'SonarQubeConnection'
     scannerMode: 'MSBuild'
     projectKey: 'HelloWorld'
     projectName: 'HelloWorld'
     projectVersion: '$(buildVersion)'
     extraProperties: |
-  sonar.projectBaseDir=$(Build.SourcesDirectory)
-  sonar.sourceEncoding=UTF-8
-  sonar.verbose=true
-  sonar.branch.analysis.mode=single
-
+      sonar.projectBaseDir=$(Build.SourcesDirectory)
+      sonar.sourceEncoding=UTF-8
+      sonar.verbose=true
+      sonar.branch.name=
   displayName: '🔍 Prepare SonarQube Analysis'
+
 
 # 4️⃣ Восстановление зависимостей
 - script: |
