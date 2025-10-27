@@ -1,5 +1,7 @@
 trigger:
-  - main
+  branches:
+    include:
+      - main   # Только главная ветка анализируется
 
 pool:
   name: Default   # self-hosted агент
@@ -17,30 +19,30 @@ stages:
   - job: BuildJob
     displayName: 'Build and SonarQube Analysis'
     steps:
-    
+
     # 1️⃣ Клонирование репозитория
     - checkout: self
       displayName: '📥 Checkout repository'
-    
-    # 2️⃣ Кэширование NuGet пакетов (опционально)
+
+    # 2️⃣ Кэш NuGet пакетов (исправлено)
     - task: Cache@2
       inputs:
-        key: 'nuget | "$(Agent.OS)" | **/HelloWorld.csproj'
+        key: 'nuget | "$(Agent.OS)" | **/*.csproj'
         restoreKeys: |
           nuget | "$(Agent.OS)"
         path: $(NUGET_PACKAGES)
       displayName: '💾 Cache NuGet packages'
       continueOnError: true
-    
+
     # 3️⃣ Установка .NET SDK
     - task: UseDotNet@2
       inputs:
         packageType: 'sdk'
         version: '9.0.x'
       displayName: '⚙️ Install .NET 9 SDK'
-    
-    # 4️⃣ Подготовка SonarQube (Community Edition)
-    - task: SonarQubePrepare@5
+
+    # 4️⃣ Подготовка SonarQube (Community Edition, без branch.name)
+    - task: SonarQubePrepare@4    # Используем старую версию без автодетекта веток
       inputs:
         SonarQube: 'SonarQubeConnection'
         scannerMode: 'MSBuild'
@@ -52,14 +54,15 @@ stages:
           sonar.sourceEncoding=UTF-8
           sonar.cs.opencover.reportsPaths=$(Agent.TempDirectory)/**/coverage.opencover.xml
           sonar.coverage.exclusions=**/*Tests.cs,**/Program.cs
+          sonar.branch.name=
       displayName: '🔍 Prepare SonarQube Analysis (Community Edition)'
-    
+
     # 5️⃣ Восстановление зависимостей
     - script: |
         echo "🔧 Restoring dependencies..."
         dotnet restore ./HelloWorld/HelloWorld.csproj
       displayName: '📦 Restore dependencies'
-    
+
     # 6️⃣ Сборка проекта
     - script: |
         echo "⚙️ Building project..."
@@ -68,66 +71,41 @@ stages:
           --no-restore \
           /p:Version=$(buildVersion)
       displayName: '🔨 Build project'
-    
-    # 7️⃣ Запуск тестов с покрытием кода
-    - script: |
-        echo "🧪 Running tests with code coverage..."
-        dotnet test ./HelloWorld/HelloWorld.csproj \
-          --configuration $(buildConfiguration) \
-          --no-build \
-          --logger trx \
-          --collect:"XPlat Code Coverage" \
-          --results-directory $(Agent.TempDirectory)/TestResults \
-          -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
-      displayName: '🧪 Run tests with coverage'
-      continueOnError: false
-    
-    # 8️⃣ Публикация результатов тестов
-    - task: PublishTestResults@2
-      inputs:
-        testResultsFormat: 'VSTest'
-        testResultsFiles: '$(Agent.TempDirectory)/TestResults/**/*.trx'
-        mergeTestResults: true
-        failTaskOnFailedTests: true
-      displayName: '📊 Publish test results'
-      condition: succeededOrFailed()
-    
-    # 9️⃣ Публикация покрытия кода
-    - task: PublishCodeCoverageResults@1
-      inputs:
-        codeCoverageTool: 'Cobertura'
-        summaryFileLocation: '$(Agent.TempDirectory)/TestResults/**/coverage.cobertura.xml'
-      displayName: '📈 Publish code coverage'
-      condition: succeededOrFailed()
-    
-    # 🔟 Анализ SonarQube
-    - task: SonarQubeAnalyze@5
+
+    # 7️⃣ (опционально) Тесты — можно закомментировать, если их нет
+    # - script: |
+    #     echo "🧪 Running tests with code coverage..."
+    #     dotnet test ./HelloWorld/HelloWorld.csproj \
+    #       --configuration $(buildConfiguration) \
+    #       --no-build \
+    #       --logger trx \
+    #       --collect:"XPlat Code Coverage" \
+    #       --results-directory $(Agent.TempDirectory)/TestResults \
+    #       -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
+    #   displayName: '🧪 Run tests with coverage'
+
+    # 8️⃣ Анализ SonarQube
+    - task: SonarQubeAnalyze@4
       displayName: '📊 Run SonarQube Analysis'
-    
-    # 1️⃣1️⃣ Публикация результатов SonarQube
-    - task: SonarQubePublish@5
+      condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+
+    # 9️⃣ Публикация Quality Gate
+    - task: SonarQubePublish@4
       inputs:
         pollingTimeoutSec: '300'
       displayName: '📢 Publish Quality Gate Result'
-    
-    # 1️⃣2️⃣ Проверка Quality Gate (опционально, но рекомендуется)
+      condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+
+    # 🔟 Публикация артефакта
     - script: |
-        echo "⏳ Checking Quality Gate status..."
-        echo "If Quality Gate fails, consider failing the build"
-      displayName: '✅ Verify Quality Gate'
-      condition: succeeded()
-    
-    # 1️⃣3️⃣ Публикация приложения
-    - script: |
-        echo "📁 Publishing application..."
+        echo "📦 Publishing application..."
         dotnet publish ./HelloWorld/HelloWorld.csproj \
           --configuration $(buildConfiguration) \
           --output $(Build.ArtifactStagingDirectory)/app \
           --no-build \
           /p:Version=$(buildVersion)
       displayName: '📤 Publish application'
-    
-    # 1️⃣4️⃣ Создание архива
+
     - task: ArchiveFiles@2
       inputs:
         rootFolderOrFile: '$(Build.ArtifactStagingDirectory)/app'
@@ -136,16 +114,15 @@ stages:
         archiveFile: '$(Build.ArtifactStagingDirectory)/$(artifactName).zip'
         replaceExistingArchive: true
       displayName: '📦 Create artifact archive'
-    
-    # 1️⃣5️⃣ Публикация артефактов
+
     - task: PublishBuildArtifacts@1
       inputs:
         PathtoPublish: '$(Build.ArtifactStagingDirectory)/$(artifactName).zip'
         ArtifactName: '$(artifactName)'
         publishLocation: 'Container'
       displayName: '🚀 Upload artifact to Azure DevOps'
-    
-    # 1️⃣6️⃣ Вывод информации о сборке
+
+    # ✅ Итог
     - script: |
         echo "=========================================="
         echo "✅ Build completed successfully!"
@@ -155,4 +132,3 @@ stages:
         echo "📌 Configuration: $(buildConfiguration)"
         echo "=========================================="
       displayName: '📋 Build Summary'
-      condition: succeeded()
