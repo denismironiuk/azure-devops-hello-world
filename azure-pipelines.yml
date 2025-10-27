@@ -22,11 +22,15 @@ steps:
 # 3️⃣ Подготовка анализа SonarQube
 - task: SonarQubePrepare@5
   inputs:
-    SonarQube: 'SonarQubeConnection'   # имя service connection, созданного ранее
+    SonarQube: 'SonarQubeConnection'   # имя service connection
     scannerMode: 'MSBuild'
     projectKey: 'HelloWorld'
     projectName: 'HelloWorld'
     projectVersion: '$(buildVersion)'
+    extraProperties: |
+      sonar.projectBaseDir=$(Build.SourcesDirectory)
+      sonar.sourceEncoding=UTF-8
+      sonar.verbose=true
   displayName: '🔍 Prepare SonarQube Analysis'
 
 # 4️⃣ Восстановление зависимостей
@@ -41,23 +45,17 @@ steps:
     dotnet build ./HelloWorld/HelloWorld.csproj --configuration $(buildConfiguration)
   displayName: "Build project"
 
-# 6️⃣ (опционально) Запуск тестов с анализом покрытия
-# - script: |
-#     echo "🧪 Running tests..."
-#     dotnet test ./HelloWorld/HelloWorld.csproj --configuration $(buildConfiguration) --collect:"XPlat Code Coverage"
-#   displayName: "Run tests"
-
-# 7️⃣ Анализ SonarQube
+# 6️⃣ Запуск анализа SonarQube
 - task: SonarQubeAnalyze@5
   displayName: '📊 Run SonarQube Analysis'
 
-# 8️⃣ Публикация результатов анализа
+# 7️⃣ Публикация результатов анализа
 - task: SonarQubePublish@5
   inputs:
     pollingTimeoutSec: '300'
   displayName: '📢 Publish SonarQube Quality Gate Result'
 
-# 9️⃣ Архивация результата сборки
+# 8️⃣ Архивация результата сборки
 - task: ArchiveFiles@2
   inputs:
     rootFolderOrFile: '$(Build.ArtifactStagingDirectory)'
@@ -67,7 +65,7 @@ steps:
     replaceExistingArchive: true
   displayName: "📦 Create versioned artifact archive"
 
-# 🔟 Публикация артефактов в Azure DevOps
+# 9️⃣ Публикация артефактов в Azure DevOps
 - task: PublishBuildArtifacts@1
   inputs:
     PathtoPublish: '$(Build.ArtifactStagingDirectory)/$(artifactName).zip'
