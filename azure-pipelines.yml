@@ -22,14 +22,15 @@ stages:
     - checkout: self
       displayName: '📥 Checkout repository'
     
-    # 2️⃣ Кэширование NuGet пакетов
+    # 2️⃣ Кэширование NuGet пакетов (опционально)
     - task: Cache@2
       inputs:
-        key: 'nuget | "$(Agent.OS)" | **/packages.lock.json, **/packages.config'
+        key: 'nuget | "$(Agent.OS)" | **/HelloWorld.csproj'
         restoreKeys: |
           nuget | "$(Agent.OS)"
         path: $(NUGET_PACKAGES)
       displayName: '💾 Cache NuGet packages'
+      continueOnError: true
     
     # 3️⃣ Установка .NET SDK
     - task: UseDotNet@2
