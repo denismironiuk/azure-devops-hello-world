@@ -40,8 +40,22 @@ stages:
         packageType: 'sdk'
         version: '9.0.x'
       displayName: '⚙️ Install .NET 9 SDK'
-    
-        # 🧹 Remove unsupported sonar.branch.name from SonarQube parameters
+        # 5️⃣ Подготовка SonarQube
+    - task: SonarQubePrepare@5
+      inputs:
+        SonarQube: 'SonarQubeConnection'
+        scannerMode: 'MSBuild'
+        projectKey: 'HelloWorld'
+        projectName: 'HelloWorld'
+        projectVersion: '$(buildVersion)'
+        extraProperties: |
+          sonar.projectBaseDir=$(Build.SourcesDirectory)
+          sonar.sourceEncoding=UTF-8
+          sonar.cs.opencover.reportsPaths=$(Agent.TempDirectory)/**/coverage.opencover.xml
+          sonar.coverage.exclusions=**/*Tests.cs,**/Program.cs
+      displayName: '🔍 Prepare SonarQube Analysis (Community Edition)'
+
+    # 🧹 Очистка параметров после Prepare
     - script: |
         echo "🧹 Cleaning SonarQube parameters for Community Edition..."
         if [ -n "$SONARQUBE_SCANNER_PARAMS" ]; then
@@ -58,23 +72,6 @@ stages:
       displayName: '🧹 Fix SonarQube scanner parameters (Community Edition)'
       condition: succeeded()
 
-
-
-
-    # 5️⃣ Подготовка SonarQube
-    - task: SonarQubePrepare@5
-      inputs:
-        SonarQube: 'SonarQubeConnection'
-        scannerMode: 'MSBuild'
-        projectKey: 'HelloWorld'
-        projectName: 'HelloWorld'
-        projectVersion: '$(buildVersion)'
-        extraProperties: |
-          sonar.projectBaseDir=$(Build.SourcesDirectory)
-          sonar.sourceEncoding=UTF-8
-          sonar.cs.opencover.reportsPaths=$(Agent.TempDirectory)/**/coverage.opencover.xml
-          sonar.coverage.exclusions=**/*Tests.cs,**/Program.cs
-      displayName: '🔍 Prepare SonarQube Analysis (Community Edition)'
     
     # 6️⃣ Восстановление зависимостей
     - script: |
