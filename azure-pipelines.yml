@@ -7,69 +7,153 @@ pool:
 variables:
   buildConfiguration: 'Release'
   buildVersion: '1.0.$(Build.BuildId)'
-  artifactName: 'drop_$(Build.BuildNumber)'
+  artifactName: 'HelloWorld-$(buildVersion)'
+  NUGET_PACKAGES: $(Pipeline.Workspace)/.nuget/packages
 
-steps:
-# 1️⃣ Клонирование репозитория
-- checkout: self
-
-# 2️⃣ Установка .NET SDK
-- task: UseDotNet@2
-  inputs:
-    packageType: 'sdk'
-    version: '9.0.x'
-
-- task: SonarQubePrepare@5
-  inputs:
-    SonarQube: 'SonarQubeConnection'
-    scannerMode: 'MSBuild'
-    projectKey: 'HelloWorld'
-    projectName: 'HelloWorld'
-    projectVersion: '$(buildVersion)'
-    extraProperties: |
-      sonar.projectBaseDir=$(Build.SourcesDirectory)
-      sonar.sourceEncoding=UTF-8
-      sonar.verbose=true
-      sonar.branch.name=
-  displayName: '🔍 Prepare SonarQube Analysis'
-
-
-# 4️⃣ Восстановление зависимостей
-- script: |
-    echo "🔧 Restoring dependencies..."
-    dotnet restore ./HelloWorld/HelloWorld.csproj
-  displayName: "Restore dependencies"
-
-# 5️⃣ Сборка проекта с включённым анализом
-- script: |
-    echo "⚙️ Building project (with SonarQube)..."
-    dotnet build ./HelloWorld/HelloWorld.csproj --configuration $(buildConfiguration)
-  displayName: "Build project"
-
-# 6️⃣ Запуск анализа SonarQube
-- task: SonarQubeAnalyze@5
-  displayName: '📊 Run SonarQube Analysis'
-
-# 7️⃣ Публикация результатов анализа
-- task: SonarQubePublish@5
-  inputs:
-    pollingTimeoutSec: '300'
-  displayName: '📢 Publish SonarQube Quality Gate Result'
-
-# 8️⃣ Архивация результата сборки
-- task: ArchiveFiles@2
-  inputs:
-    rootFolderOrFile: '$(Build.ArtifactStagingDirectory)'
-    includeRootFolder: false
-    archiveType: 'zip'
-    archiveFile: '$(Build.ArtifactStagingDirectory)/$(artifactName).zip'
-    replaceExistingArchive: true
-  displayName: "📦 Create versioned artifact archive"
-
-# 9️⃣ Публикация артефактов в Azure DevOps
-- task: PublishBuildArtifacts@1
-  inputs:
-    PathtoPublish: '$(Build.ArtifactStagingDirectory)/$(artifactName).zip'
-    ArtifactName: '$(artifactName)'
-    publishLocation: 'Container'
-  displayName: "🚀 Upload versioned artifact to Azure DevOps"
+stages:
+- stage: Build
+  displayName: '🏗️ Build & Analyze'
+  jobs:
+  - job: BuildJob
+    displayName: 'Build and SonarQube Analysis'
+    steps:
+    
+    # 1️⃣ Клонирование репозитория
+    - checkout: self
+      displayName: '📥 Checkout repository'
+    
+    # 2️⃣ Кэширование NuGet пакетов
+    - task: Cache@2
+      inputs:
+        key: 'nuget | "$(Agent.OS)" | **/packages.lock.json, **/packages.config'
+        restoreKeys: |
+          nuget | "$(Agent.OS)"
+        path: $(NUGET_PACKAGES)
+      displayName: '💾 Cache NuGet packages'
+    
+    # 3️⃣ Установка .NET SDK
+    - task: UseDotNet@2
+      inputs:
+        packageType: 'sdk'
+        version: '9.0.x'
+      displayName: '⚙️ Install .NET 9 SDK'
+    
+    # 4️⃣ Подготовка SonarQube
+    - task: SonarQubePrepare@5
+      inputs:
+        SonarQube: 'SonarQubeConnection'
+        scannerMode: 'MSBuild'
+        projectKey: 'HelloWorld'
+        projectName: 'HelloWorld'
+        projectVersion: '$(buildVersion)'
+        extraProperties: |
+          sonar.projectBaseDir=$(Build.SourcesDirectory)
+          sonar.sourceEncoding=UTF-8
+          sonar.verbose=true
+          sonar.branch.name=$(Build.SourceBranchName)
+          sonar.cs.opencover.reportsPaths=$(Agent.TempDirectory)/**/coverage.opencover.xml
+          sonar.coverage.exclusions=**/*Tests.cs,**/Program.cs
+      displayName: '🔍 Prepare SonarQube Analysis'
+    
+    # 5️⃣ Восстановление зависимостей
+    - script: |
+        echo "🔧 Restoring dependencies..."
+        dotnet restore ./HelloWorld/HelloWorld.csproj
+      displayName: '📦 Restore dependencies'
+    
+    # 6️⃣ Сборка проекта
+    - script: |
+        echo "⚙️ Building project..."
+        dotnet build ./HelloWorld/HelloWorld.csproj \
+          --configuration $(buildConfiguration) \
+          --no-restore \
+          /p:Version=$(buildVersion)
+      displayName: '🔨 Build project'
+    
+    # 7️⃣ Запуск тестов с покрытием кода
+    - script: |
+        echo "🧪 Running tests with code coverage..."
+        dotnet test ./HelloWorld/HelloWorld.csproj \
+          --configuration $(buildConfiguration) \
+          --no-build \
+          --logger trx \
+          --collect:"XPlat Code Coverage" \
+          --results-directory $(Agent.TempDirectory)/TestResults \
+          -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
+      displayName: '🧪 Run tests with coverage'
+      continueOnError: false
+    
+    # 8️⃣ Публикация результатов тестов
+    - task: PublishTestResults@2
+      inputs:
+        testResultsFormat: 'VSTest'
+        testResultsFiles: '$(Agent.TempDirectory)/TestResults/**/*.trx'
+        mergeTestResults: true
+        failTaskOnFailedTests: true
+      displayName: '📊 Publish test results'
+      condition: succeededOrFailed()
+    
+    # 9️⃣ Публикация покрытия кода
+    - task: PublishCodeCoverageResults@1
+      inputs:
+        codeCoverageTool: 'Cobertura'
+        summaryFileLocation: '$(Agent.TempDirectory)/TestResults/**/coverage.cobertura.xml'
+      displayName: '📈 Publish code coverage'
+      condition: succeededOrFailed()
+    
+    # 🔟 Анализ SonarQube
+    - task: SonarQubeAnalyze@5
+      displayName: '📊 Run SonarQube Analysis'
+    
+    # 1️⃣1️⃣ Публикация результатов SonarQube
+    - task: SonarQubePublish@5
+      inputs:
+        pollingTimeoutSec: '300'
+      displayName: '📢 Publish Quality Gate Result'
+    
+    # 1️⃣2️⃣ Проверка Quality Gate (опционально, но рекомендуется)
+    - script: |
+        echo "⏳ Checking Quality Gate status..."
+        echo "If Quality Gate fails, consider failing the build"
+      displayName: '✅ Verify Quality Gate'
+      condition: succeeded()
+    
+    # 1️⃣3️⃣ Публикация приложения
+    - script: |
+        echo "📁 Publishing application..."
+        dotnet publish ./HelloWorld/HelloWorld.csproj \
+          --configuration $(buildConfiguration) \
+          --output $(Build.ArtifactStagingDirectory)/app \
+          --no-build \
+          /p:Version=$(buildVersion)
+      displayName: '📤 Publish application'
+    
+    # 1️⃣4️⃣ Создание архива
+    - task: ArchiveFiles@2
+      inputs:
+        rootFolderOrFile: '$(Build.ArtifactStagingDirectory)/app'
+        includeRootFolder: false
+        archiveType: 'zip'
+        archiveFile: '$(Build.ArtifactStagingDirectory)/$(artifactName).zip'
+        replaceExistingArchive: true
+      displayName: '📦 Create artifact archive'
+    
+    # 1️⃣5️⃣ Публикация артефактов
+    - task: PublishBuildArtifacts@1
+      inputs:
+        PathtoPublish: '$(Build.ArtifactStagingDirectory)/$(artifactName).zip'
+        ArtifactName: '$(artifactName)'
+        publishLocation: 'Container'
+      displayName: '🚀 Upload artifact to Azure DevOps'
+    
+    # 1️⃣6️⃣ Вывод информации о сборке
+    - script: |
+        echo "=========================================="
+        echo "✅ Build completed successfully!"
+        echo "=========================================="
+        echo "📌 Build Version: $(buildVersion)"
+        echo "📌 Artifact Name: $(artifactName).zip"
+        echo "📌 Configuration: $(buildConfiguration)"
+        echo "=========================================="
+      displayName: '📋 Build Summary'
+      condition: succeeded()
