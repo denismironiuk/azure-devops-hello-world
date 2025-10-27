@@ -28,9 +28,11 @@ steps:
     projectName: 'HelloWorld'
     projectVersion: '$(buildVersion)'
     extraProperties: |
-      sonar.projectBaseDir=$(Build.SourcesDirectory)
-      sonar.sourceEncoding=UTF-8
-      sonar.verbose=true
+  sonar.projectBaseDir=$(Build.SourcesDirectory)
+  sonar.sourceEncoding=UTF-8
+  sonar.verbose=true
+  sonar.branch.analysis.mode=single
+
   displayName: '🔍 Prepare SonarQube Analysis'
 
 # 4️⃣ Восстановление зависимостей
