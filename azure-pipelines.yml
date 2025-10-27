@@ -83,7 +83,13 @@ stages:
           -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
       displayName: '🧪 Run tests with coverage'
       continueOnError: false
-    
+    # 🧹 Remove unsupported sonar.branch.name from SonarQube parameters
+    - bash: |
+        echo "🧹 Cleaning SONARQUBE_SCANNER_PARAMS..."
+        CLEANED=$(echo "$SONARQUBE_SCANNER_PARAMS" | sed 's/"sonar\.branch\.name":"[^"]*",\?//g')
+        echo "##vso[task.setvariable variable=SONARQUBE_SCANNER_PARAMS]$CLEANED"
+      displayName: '🧹 Fix SonarQube scanner parameters (Linux)'
+
     # 8️⃣ Публикация результатов тестов
     - task: PublishTestResults@2
       inputs:
