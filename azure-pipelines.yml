@@ -107,7 +107,17 @@ stages:
         summaryFileLocation: '$(Agent.TempDirectory)/TestResults/**/coverage.cobertura.xml'
       displayName: '📈 Publish code coverage'
       condition: succeededOrFailed()
-    
+    # 🧹 Remove unsupported sonar.branch.name from SonarQube params
+    - bash: |
+        echo "🧹 Cleaning SONARQUBE_SCANNER_PARAMS..."
+        if [ -n "$SONARQUBE_SCANNER_PARAMS" ]; then
+          CLEANED=$(echo "$SONARQUBE_SCANNER_PARAMS" | sed 's/"sonar\.branch\.name":"[^"]*",\?//g')
+          echo "##vso[task.setvariable variable=SONARQUBE_SCANNER_PARAMS]$CLEANED"
+        else
+          echo "No SONARQUBE_SCANNER_PARAMS found, skipping cleanup."
+        fi
+      displayName: '🧹 Fix SonarQube scanner parameters (Linux)'
+
     # 🔟 Анализ SonarQube
     - task: SonarQubeAnalyze@5
       displayName: '📊 Run SonarQube Analysis'
