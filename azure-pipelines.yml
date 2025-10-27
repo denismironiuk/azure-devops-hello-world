@@ -105,7 +105,11 @@ stages:
     # 🔟 Анализ SonarQube
     - task: SonarQubeAnalyze@5
       displayName: '📊 Run SonarQube Analysis'
-    
+    # 🧹 Fix: disable automatic branch detection for Community Edition
+    - script: |
+        echo "🧹 Disabling automatic branch detection for SonarQube Community Edition..."
+        echo "##vso[task.setvariable variable=Build.SourceBranchName;]main"
+      displayName: '🧹 Clear branch name for SonarQube (Community Edition)'
     # 1️⃣1️⃣ Публикация результатов SonarQube
     - task: SonarQubePublish@5
       inputs:
