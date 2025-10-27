@@ -41,15 +41,23 @@ stages:
         version: '9.0.x'
       displayName: '⚙️ Install .NET 9 SDK'
     
-    - bash: |
-        echo "Stripping branch/PR params for Community Edition..."
-        CLEANED=$(echo "$SONARQUBE_SCANNER_PARAMS" \
-          | sed 's/"sonar.branch.name":"[^"]*",\?//g' \
-          | sed 's/"sonar\.pullrequest\.[^"]":"[^"]",\?//g' \
-          | sed 's/,\s*}/}/g' | sed 's/{\s*,/{/g')
-        echo "##vso[task.setvariable variable=SONARQUBE_SCANNER_PARAMS]$CLEANED"
-      displayName: 'SonarQube (CE): strip branch/PR params'
-      condition: eq(variables['Build.SourceBranchName'], variables['sonarBranchName'])
+        # 🧹 Remove unsupported sonar.branch.name from SonarQube parameters
+    - script: |
+        echo "🧹 Cleaning SonarQube parameters for Community Edition..."
+        if [ -n "$SONARQUBE_SCANNER_PARAMS" ]; then
+          CLEANED=$(echo "$SONARQUBE_SCANNER_PARAMS" \
+            | sed 's/"sonar\.branch\.name":"[^"]*",\?//g' \
+            | sed 's/"sonar\.pullrequest\.[^"]*":"[^"]*",\?//g' \
+            | sed 's/,\s*}/}/g' \
+            | sed 's/{\s*,/{/g')
+          echo "✅ Cleaned SONARQUBE_SCANNER_PARAMS applied."
+          echo "##vso[task.setvariable variable=SONARQUBE_SCANNER_PARAMS]$CLEANED"
+        else
+          echo "ℹ️ No SONARQUBE_SCANNER_PARAMS found, skipping cleanup."
+        fi
+      displayName: '🧹 Fix SonarQube scanner parameters (Community Edition)'
+      condition: succeeded()
+
 
 
 
