@@ -39,7 +39,7 @@ stages:
         version: '9.0.x'
       displayName: '⚙️ Install .NET 9 SDK'
     
-    # 4️⃣ Подготовка SonarQube
+    # 4️⃣ Подготовка SonarQube (Community Edition)
     - task: SonarQubePrepare@5
       inputs:
         SonarQube: 'SonarQubeConnection'
@@ -50,11 +50,9 @@ stages:
         extraProperties: |
           sonar.projectBaseDir=$(Build.SourcesDirectory)
           sonar.sourceEncoding=UTF-8
-          sonar.verbose=true
-          sonar.branch.name=$(Build.SourceBranchName)
           sonar.cs.opencover.reportsPaths=$(Agent.TempDirectory)/**/coverage.opencover.xml
           sonar.coverage.exclusions=**/*Tests.cs,**/Program.cs
-      displayName: '🔍 Prepare SonarQube Analysis'
+      displayName: '🔍 Prepare SonarQube Analysis (Community Edition)'
     
     # 5️⃣ Восстановление зависимостей
     - script: |
